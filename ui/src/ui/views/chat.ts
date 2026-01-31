@@ -14,6 +14,7 @@ import {
 } from "../chat/grouped-render";
 import { renderMarkdownSidebar } from "./markdown-sidebar";
 import "../components/resizable-divider";
+import "../components/voice-recorder";
 
 export type CompactionIndicatorStatus = {
   active: boolean;
@@ -51,6 +52,8 @@ export type ChatProps = {
   splitRatio?: number;
   assistantName: string;
   assistantAvatar: string | null;
+  // Voice settings
+  voiceLanguage?: string;
   // Event handlers
   onRefresh: () => void;
   onToggleFocusMode: () => void;
@@ -63,6 +66,7 @@ export type ChatProps = {
   onCloseSidebar?: () => void;
   onSplitRatioChange?: (ratio: number) => void;
   onChatScroll?: (event: Event) => void;
+  onVoiceTranscript?: (transcript: string) => void;
 };
 
 const COMPACTION_TOAST_DURATION_MS = 5000;
@@ -252,6 +256,16 @@ export function renderChat(props: ChatProps) {
           ></textarea>
         </label>
         <div class="chat-compose__actions">
+          <voice-recorder
+            ?disabled=${!props.connected}
+            language=${props.voiceLanguage || "ro-RO"}
+            @transcript=${(e: CustomEvent) => {
+              const transcript = e.detail.transcript;
+              if (transcript && props.onVoiceTranscript) {
+                props.onVoiceTranscript(transcript);
+              }
+            }}
+          ></voice-recorder>
           <button
             class="btn"
             ?disabled=${!props.connected || props.sending}

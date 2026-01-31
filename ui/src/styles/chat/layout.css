@@ -133,7 +133,8 @@
 .chat-compose__actions {
   flex-shrink: 0;
   display: flex;
-  align-items: stretch;
+  align-items: center;
+  gap: 8px;
 }
 
 .chat-compose .chat-compose__actions .btn {

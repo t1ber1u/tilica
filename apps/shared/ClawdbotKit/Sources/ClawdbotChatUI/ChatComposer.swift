@@ -20,6 +20,11 @@ struct ClawdbotChatComposer: View {
     @State private var shouldFocusTextView = false
     #endif
 
+    // Voice recording state
+    @State private var voiceRecorder = ChatVoiceRecorder()
+    @State private var showVoiceMode = false
+    @State private var showVoiceSettings = false
+
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             if self.showsToolbar {
@@ -29,6 +34,7 @@ struct ClawdbotChatComposer: View {
                     }
                     self.thinkingPicker
                     Spacer()
+                    self.voiceSettingsButton
                     self.refreshButton
                     self.attachmentPicker
                 }
@@ -178,6 +184,11 @@ struct ClawdbotChatComposer: View {
 
     private var editor: some View {
         VStack(alignment: .leading, spacing: 8) {
+            // Show voice transcript when recording
+            if self.voiceRecorder.isRecording || !self.voiceRecorder.partialTranscript.isEmpty {
+                ChatVoiceTranscript(text: self.voiceRecorder.partialTranscript)
+            }
+
             self.editorOverlay
 
             Rectangle()
@@ -190,6 +201,7 @@ struct ClawdbotChatComposer: View {
                     self.connectionPill
                 }
                 Spacer(minLength: 0)
+                self.voiceButton
                 self.sendButton
             }
         }
@@ -296,6 +308,21 @@ struct ClawdbotChatComposer: View {
         }
     }
 
+    private var voiceButton: some View {
+        ChatVoiceButton(recorder: self.voiceRecorder) { transcript in
+            // When voice recording completes, add to input and send
+            self.viewModel.input = transcript
+            self.viewModel.send()
+        }
+        .onAppear {
+            // Sync language setting with recorder
+            self.voiceRecorder.localeIdentifier = self.viewModel.voiceSettings.speechLanguage
+        }
+        .onChange(of: self.viewModel.voiceSettings.speechLanguage) { _, newLang in
+            self.voiceRecorder.localeIdentifier = newLang
+        }
+    }
+
     private var refreshButton: some View {
         Button {
             self.viewModel.refresh()
@@ -305,6 +332,111 @@ struct ClawdbotChatComposer: View {
         .buttonStyle(.bordered)
         .controlSize(.small)
         .help("Refresh")
+    }
+
+    @ViewBuilder
+    private var voiceSettingsButton: some View {
+        #if os(macOS)
+        Button {
+            self.showVoiceSettings.toggle()
+        } label: {
+            Image(systemName: self.viewModel.voiceSettings.autoTTS ? "speaker.wave.2.fill" : "speaker.wave.2")
+        }
+        .buttonStyle(.bordered)
+        .controlSize(.small)
+        .help("Voice Settings")
+        .tint(self.viewModel.voiceSettings.autoTTS ? .accentColor : nil)
+        .popover(isPresented: self.$showVoiceSettings) {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Voice Settings")
+                    .font(.headline)
+                    .padding(.bottom, 4)
+
+                Toggle("Auto-speak responses", isOn: self.$viewModel.voiceSettings.autoTTS)
+                    .toggleStyle(.switch)
+
+                if self.viewModel.voiceSettings.autoTTS {
+                    Divider()
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("TTS Voice")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+
+                        Picker("Voice", selection: self.$viewModel.voiceSettings.voiceIdentifier) {
+                            Text("System Default").tag(nil as String?)
+                            ForEach(ChatVoiceOption.romanianVoices) { voice in
+                                Text(voice.name).tag(voice.id as String?)
+                            }
+                            Divider()
+                            ForEach(ChatVoiceOption.availableVoices().filter { !$0.language.hasPrefix("ro") }.prefix(20)) { voice in
+                                Text("\(voice.name) (\(voice.language))").tag(voice.id as String?)
+                            }
+                        }
+                        .labelsHidden()
+                        .frame(maxWidth: 200)
+                    }
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Speaking Rate")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+
+                        HStack {
+                            Image(systemName: "tortoise")
+                                .foregroundStyle(.secondary)
+                            Slider(value: self.$viewModel.voiceSettings.speakingRate, in: 0.1...1.0)
+                                .frame(width: 120)
+                            Image(systemName: "hare")
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+
+                Divider()
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Speech Recognition Language")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    Picker("Language", selection: Binding(
+                        get: { self.viewModel.voiceSettings.speechLanguage },
+                        set: { newValue in
+                            self.viewModel.voiceSettings.speechLanguage = newValue
+                            self.voiceRecorder.localeIdentifier = newValue
+                        }
+                    )) {
+                        ForEach(ChatSpeechLanguageOption.commonLanguages) { lang in
+                            Text(lang.nativeName).tag(lang.id)
+                        }
+                    }
+                    .labelsHidden()
+                    .frame(maxWidth: 200)
+                }
+
+                if self.viewModel.isSpeaking {
+                    Divider()
+                    HStack {
+                        ProgressView()
+                            .controlSize(.small)
+                        Text("Speaking...")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        Button("Stop") {
+                            self.viewModel.stopSpeaking()
+                        }
+                        .controlSize(.small)
+                    }
+                }
+            }
+            .padding()
+            .frame(width: 280)
+        }
+        #else
+        EmptyView()
+        #endif
     }
 
     private var showsToolbar: Bool {

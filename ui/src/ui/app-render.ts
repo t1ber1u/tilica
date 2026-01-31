@@ -487,6 +487,14 @@ export function renderApp(state: AppViewState) {
               onSplitRatioChange: (ratio: number) => state.handleSplitRatioChange(ratio),
               assistantName: state.assistantName,
               assistantAvatar: state.assistantAvatar,
+              voiceLanguage: "ro-RO",
+              onVoiceTranscript: (transcript: string) => {
+                console.log("[voice] transcript received:", transcript);
+                if (!transcript.trim()) return;
+                state.chatMessage = transcript;
+                console.log("[voice] sending message:", state.chatMessage);
+                void state.handleSendChat();
+              },
             })
           : nothing}
 

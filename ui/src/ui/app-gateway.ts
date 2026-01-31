@@ -26,6 +26,7 @@ import {
 import type { ClawdbotApp } from "./app";
 import type { ExecApprovalRequest } from "./controllers/exec-approval";
 import { loadAssistantIdentity } from "./controllers/assistant-identity";
+import { WebTTSSpeaker } from "./components/voice-recorder";
 
 type GatewayHost = {
   settings: UiSettings;
@@ -50,6 +51,7 @@ type GatewayHost = {
   assistantAgentId: string | null;
   sessionKey: string;
   chatRunId: string | null;
+  chatStream: string | null;
   execApprovalQueue: ExecApprovalRequest[];
   execApprovalError: string | null;
 };
@@ -178,6 +180,8 @@ function handleGatewayEventUnsafe(host: GatewayHost, evt: GatewayEventFrame) {
         payload.sessionKey,
       );
     }
+    // Capture stream text before it gets cleared (for TTS)
+    const streamTextForTTS = host.chatStream?.trim() || null;
     const state = handleChatEvent(host as unknown as ClawdbotApp, payload);
     if (state === "final" || state === "error" || state === "aborted") {
       resetToolStream(host as unknown as Parameters<typeof resetToolStream>[0]);
@@ -185,7 +189,20 @@ function handleGatewayEventUnsafe(host: GatewayHost, evt: GatewayEventFrame) {
         host as unknown as Parameters<typeof flushChatQueueForEvent>[0],
       );
     }
-    if (state === "final") void loadChatHistory(host as unknown as ClawdbotApp);
+    if (state === "final") {
+      void loadChatHistory(host as unknown as ClawdbotApp);
+      // Speak the response using TTS
+      if (streamTextForTTS) {
+        console.log("[voice] TTS speaking response:", streamTextForTTS.slice(0, 100) + "...");
+        try {
+          WebTTSSpeaker.instance.speak(streamTextForTTS, { lang: "ro-RO" });
+        } catch (err) {
+          console.warn("[voice] TTS failed:", err);
+        }
+      } else {
+        console.log("[voice] No stream text available for TTS");
+      }
+    }
     return;
   }
 

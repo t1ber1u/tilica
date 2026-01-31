@@ -26,6 +26,10 @@ public final class ClawdbotChatViewModel {
     public private(set) var healthOK: Bool = false
     public private(set) var pendingRunCount: Int = 0
 
+    // Voice settings
+    public var voiceSettings: ChatVoiceSettings = .default
+    public private(set) var isSpeaking: Bool = false
+
     public private(set) var sessionKey: String
     public private(set) var sessionId: String?
     public private(set) var streamingAssistantText: String?
@@ -140,6 +144,39 @@ public final class ClawdbotChatViewModel {
 
     public func removeAttachment(_ id: ClawdbotPendingAttachment.ID) {
         self.attachments.removeAll { $0.id == id }
+    }
+
+    /// Speak text using TTS (if auto-TTS is enabled)
+    public func speakResponse(_ text: String) {
+        #if canImport(AppKit)
+        guard self.voiceSettings.autoTTS else { return }
+        guard !text.isEmpty else { return }
+
+        self.isSpeaking = true
+        ChatTTSSpeaker.shared.speak(
+            text,
+            voiceIdentifier: self.voiceSettings.voiceIdentifier,
+            rate: self.voiceSettings.speakingRate
+        )
+
+        // Track speaking state
+        Task {
+            while ChatTTSSpeaker.shared.isSpeaking {
+                try? await Task.sleep(nanoseconds: 100_000_000)
+            }
+            await MainActor.run {
+                self.isSpeaking = false
+            }
+        }
+        #endif
+    }
+
+    /// Stop current TTS playback
+    public func stopSpeaking() {
+        #if canImport(AppKit)
+        ChatTTSSpeaker.shared.stop()
+        self.isSpeaking = false
+        #endif
     }
 
     public var canSend: Bool {
@@ -399,6 +436,14 @@ public final class ClawdbotChatViewModel {
             } else if self.pendingRuns.count <= 1 {
                 self.clearPendingRuns(reason: nil)
             }
+
+            // Auto-TTS: speak the streaming text before clearing
+            if chat.state == "final", self.voiceSettings.autoTTS {
+                if let text = self.streamingAssistantText, !text.isEmpty {
+                    self.speakResponse(text)
+                }
+            }
+
             self.pendingToolCallsById = [:]
             self.streamingAssistantText = nil
             Task { await self.refreshHistoryAfterRun() }
