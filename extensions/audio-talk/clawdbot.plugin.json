@@ -1,0 +1,101 @@
+{
+  "id": "audio-talk",
+  "name": "Audio Talk",
+  "description": "Local voice conversation loop using whisper.cpp and macOS say",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "enabled": { "type": "boolean" },
+      "whisper": {
+        "type": "object",
+        "properties": {
+          "binaryPath": { "type": "string" },
+          "modelPath": { "type": "string" },
+          "language": { "type": "string" },
+          "threads": { "type": "integer", "minimum": 1 }
+        }
+      },
+      "audio": {
+        "type": "object",
+        "properties": {
+          "ffmpegPath": { "type": "string" },
+          "device": { "type": "string" },
+          "sampleRate": { "type": "integer", "minimum": 8000 },
+          "maxDurationSec": { "type": "integer", "minimum": 1 }
+        }
+      },
+      "tts": {
+        "type": "object",
+        "properties": {
+          "enabled": { "type": "boolean" },
+          "engine": { "type": "string", "enum": ["say"] },
+          "voice": { "type": "string" }
+        }
+      },
+      "session": {
+        "type": "object",
+        "properties": {
+          "agentId": { "type": "string" },
+          "thinking": { "type": "string" }
+        }
+      }
+    }
+  },
+  "uiHints": {
+    "whisper.binaryPath": {
+      "label": "Whisper Binary Path",
+      "placeholder": "whisper-cpp",
+      "help": "Path to whisper.cpp main binary"
+    },
+    "whisper.modelPath": {
+      "label": "Whisper Model Path",
+      "placeholder": "~/.cache/clawdbot/models/whisper/ggml-base.bin",
+      "help": "Path to GGML whisper model file"
+    },
+    "whisper.language": {
+      "label": "Language",
+      "placeholder": "ro",
+      "help": "ISO language code (e.g., ro, en, auto)"
+    },
+    "whisper.threads": {
+      "label": "Threads",
+      "help": "Number of CPU threads for transcription",
+      "advanced": true
+    },
+    "audio.ffmpegPath": {
+      "label": "FFmpeg Path",
+      "placeholder": "ffmpeg",
+      "advanced": true
+    },
+    "audio.device": {
+      "label": "Audio Device",
+      "placeholder": ":default",
+      "help": "avfoundation device (e.g., :default, :0)",
+      "advanced": true
+    },
+    "audio.sampleRate": {
+      "label": "Sample Rate (Hz)",
+      "advanced": true
+    },
+    "audio.maxDurationSec": {
+      "label": "Max Recording Duration (sec)",
+      "advanced": true
+    },
+    "tts.enabled": {
+      "label": "Enable TTS"
+    },
+    "tts.voice": {
+      "label": "TTS Voice",
+      "placeholder": "Samantha",
+      "help": "macOS voice name (run 'say -v ?' to list)"
+    },
+    "session.agentId": {
+      "label": "Default Agent ID"
+    },
+    "session.thinking": {
+      "label": "Thinking Level",
+      "help": "off, low, medium, high"
+    }
+  }
+}

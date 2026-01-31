@@ -17,6 +17,8 @@ import { registerOnboardCommand } from "./register.onboard.js";
 import { registerSetupCommand } from "./register.setup.js";
 import { registerStatusHealthSessionsCommands } from "./register.status-health-sessions.js";
 import { registerSubCliCommands } from "./register.subclis.js";
+import { registerPluginCliCommands } from "../../plugins/cli.js";
+import { loadConfig } from "../../config/config.js";
 import type { ProgramContext } from "./context.js";
 
 type CommandRegisterParams = {
@@ -151,6 +153,10 @@ export const commandRegistry: CommandRegistration[] = [
   {
     id: "browser",
     register: ({ program }) => registerBrowserCli(program),
+  },
+  {
+    id: "plugin-cli",
+    register: ({ program }) => registerPluginCliCommands(program, loadConfig()),
   },
 ];
 

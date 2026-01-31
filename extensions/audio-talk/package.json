@@ -1,0 +1,14 @@
+{
+  "name": "@clawdbot/audio-talk",
+  "version": "2026.1.24",
+  "type": "module",
+  "description": "Local voice conversation loop using whisper.cpp and macOS say",
+  "dependencies": {
+    "zod": "^4.3.6"
+  },
+  "clawdbot": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}
